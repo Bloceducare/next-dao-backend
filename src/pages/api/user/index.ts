@@ -5,7 +5,7 @@ import Transaction from "@models/transaction"
 import { getUsers , getUser} from 'server/services/user'
 import { getTransaction } from 'server/services/transaction';
 import connectDB from 'config/db';
-
+import NextCors from 'nextjs-cors';
 
 connectDB();
 
@@ -14,6 +14,13 @@ export default async function handler(
     req: NextApiRequest,
     res: NextApiResponse
   ) {
+    await NextCors(req, res, {
+      // Options
+      methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+      origin: '*',
+      optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
+   });
+
     if(req.method==="GET"){
         const users = await getUsers(); 
         return  res.json(users);
