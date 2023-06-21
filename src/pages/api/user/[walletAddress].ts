@@ -4,6 +4,16 @@ import { getUser } from 'server/services/user';
 import NextCors from 'nextjs-cors';
 
 
+class CustomError extends Error {
+  statusCode: number
+  constructor(message, statusCode) {
+    super(message);
+    this.statusCode = statusCode;
+  
+  }
+}
+
+
 connectDB()
 export default async function handler(
   req: NextApiRequest,
@@ -15,31 +25,29 @@ export default async function handler(
     origin: '*',
     optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
  });
-    const walletAddress = req.query.walletAddress as string
+    const walletAddress = String(req.query.walletAddress) as string
+   
     if (!walletAddress) {
-      return res.status(400).json({ error: 'Missing wallet address' })
+      throw new CustomError("Missing wallet address",400)     
     }
+   
+    try{
+      if(req.method==="GET"){
+        const user = await getUser(walletAddress)
+        if(!user){
+          throw new CustomError("User not found",404)
+        }
+        return res.status(200).json(user)
 
+      }
 
-    if(req.method==="GET"){
-        try {          
-        
-            const user = await getUser(walletAddress)
-        
-            if (!user) {
-              return res.status(404).json({ error: "User not found" });
-            }
-        
-            // Return the user details in the response
-            res.json(user);
-          } catch (error) {
-            console.error(error);
-         return   res.status(400).send({
-              success: false,
-              message: error,
-            });
-          }
+      throw  new CustomError("Method not supported", 405)
     }
-  return  res.status(200).json({ error:"Method not allowed" })
-
+    catch(e){      
+      return res.status(e?.statusCode ?? 500).json({
+        error: {
+          message: e?.message ?? "Server error",
+        }
+      })
+    }   
 }
